@@ -30,6 +30,7 @@ class IterativeRefinementGenerator(object):
         adaptive=True,
         retain_history=False,
         reranking=False,
+        init_tokens=None,
     ):
         """
         Generates translations based on iterative refinement.
@@ -58,6 +59,7 @@ class IterativeRefinementGenerator(object):
         self.retain_history = retain_history
         self.adaptive = adaptive
         self.models = models
+        self.init_tokens = init_tokens
 
     def generate_batched_itr(
         self,
@@ -132,8 +134,20 @@ class IterativeRefinementGenerator(object):
         bsz, src_len = src_tokens.size()
 
         # initialize
-        encoder_out = model.forward_encoder([src_tokens, src_lengths])
-        prev_decoder_out = model.initialize_output_tokens(encoder_out, src_tokens)
+        # encoder_out = model.forward_encoder([src_tokens, src_lengths])
+        encoder_out = model.forward_encoder(
+            [
+                sample["net_input"][inp]
+                for inp in sample["net_input"]
+                if inp != "prev_output_tokens"
+            ]
+        )
+        init_tokens = None
+        if self.init_tokens is not None:
+            init_tokens = sample[self.init_tokens]
+        prev_decoder_out = model.initialize_output_tokens(
+            encoder_out, src_tokens, init_tokens=init_tokens
+        )
 
         if self.beam_size > 1:
             assert (
@@ -204,8 +218,7 @@ class IterativeRefinementGenerator(object):
                 "decoding_format": self.decoding_format,
             }
             prev_decoder_out = prev_decoder_out._replace(
-                step=step,
-                max_step=self.max_iter + 1,
+                step=step, max_step=self.max_iter + 1,
             )
 
             decoder_out = model.forward_decoder(
@@ -221,9 +234,7 @@ class IterativeRefinementGenerator(object):
                     decoder_out.attn,
                 )
                 decoder_out = decoder_out._replace(
-                    output_tokens=out_tokens,
-                    output_scores=out_scores,
-                    attn=out_attn,
+                    output_tokens=out_tokens, output_scores=out_scores, attn=out_attn,
                 )
 
             else:

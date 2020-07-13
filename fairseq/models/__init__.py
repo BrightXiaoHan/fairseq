@@ -29,6 +29,8 @@ from .fairseq_model import (
     FairseqMultiModel,
 )
 
+from .composite_encoder import CompositeEncoder
+from .distributed_fairseq_model import DistributedFairseqModel
 
 MODEL_REGISTRY = {}
 MODEL_DATACLASS_REGISTRY = {}
