@@ -705,7 +705,8 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, src_len]
 
         if attn_mask is not None:
-            attn_mask = attn_mask.unsqueeze(0)
+            if len(list(attn_mask.size())) != len(list(attn_mask.size())):
+                attn_mask = attn_mask.unsqueeze(0)
             if self.onnx_trace:
                 attn_mask = attn_mask.repeat(attn_weights.size(0), 1, 1)
             attn_weights += attn_mask
